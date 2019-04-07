@@ -37,7 +37,7 @@ ui <- fluidPage(
       # Output: Data file ----
   tabsetPanel(type = "tabs",
                 
-                  tabPanel("Random Forest", verbatimTextOutput("summary"),verbatimTextOutput("summary1"),verbatimTextOutput("summary2"),verbatimTextOutput("summary3"),verbatimTextOutput("summary4"),verbatimTextOutput("summary5")),
+                  tabPanel("Random Forest", verbatimTextOutput("sum1"),verbatimTextOutput("sum2"),verbatimTextOutput("sum3"),verbatimTextOutput("sum4")),
 				  tabPanel("Neural Network", verbatimTextOutput("sag"),verbatimTextOutput("sag1"),verbatimTextOutput("sag2"),verbatimTextOutput("sag3"),verbatimTextOutput("sag4"),verbatimTextOutput("sag5")),
 				  tabPanel("Table", tableOutput("table"))
                         ),
@@ -60,7 +60,8 @@ server <- function(input, output) {
 
     req(input$file1)
 train <-read.csv(input$file1$datapath)
-test=read.csv("F:/project report/Bike Rental/test.csv")
+setwd("F:/project report/Bike Rental") #give the location of test data set
+test=read.csv("test.csv")
 # reading the data files
 #train=read.csv("train_bike.csv")
 #test=read.csv("test_bike.csv")
@@ -104,7 +105,15 @@ data$day=days
 train=data[as.integer(substr(data$datetime,9,10))<20,]
 test=data[as.integer(substr(data$datetime,9,10))>19,]
 
+# creating boxplots for rentals with different variables to see the variation
+boxplot(train$registered~train$day,xlab="day", ylab="registered users 2")
+boxplot(train$casual~train$day,xlab="day", ylab="casual users")
 
+boxplot(train$registered~train$weather,xlab="weather", ylab="registered users 3")
+boxplot(train$casual~train$weather,xlab="weather", ylab="casual users")
+
+boxplot(train$registered~train$temp,xlab="temp", ylab="registered users 4")
+boxplot(train$casual~train$temp,xlab="temp", ylab="casual users")
 
 # extracting year from data
 data$year=substr(data$datetime,1,4)
@@ -115,7 +124,15 @@ train=data[as.integer(substr(data$datetime,9,10))<20,]
 test=data[as.integer(substr(data$datetime,9,10))>19,]
 
 # again some boxplots with different variables
+# these boxplots give important information about the dependent variable with respect to the independent variables
+boxplot(train$registered~train$year,xlab="year", ylab="registered users 5")
+boxplot(train$casual~train$year,xlab="year", ylab="casual users")
 
+boxplot(train$registered~train$windspeed,xlab="year", ylab="registered users 6")
+boxplot(train$casual~train$windspeed,xlab="year", ylab="casual users")
+
+boxplot(train$registered~train$humidity,xlab="humidity", ylab="registered users 7")
+boxplot(train$casual~train$humidity,xlab="humidity", ylab="casual users 8")
 
 data$hour=as.integer(data$hour)
 
@@ -244,28 +261,16 @@ boxplot(train$logreg~train$season,xlab="season", ylab="registered users 12")
 # note that we build different models for predicting for registered and casual users
 # this was seen as giving best result after a lot of experimentation
 set.seed(415)
- output$summary <- renderPrint({
- "Accuracy"
 
-  })
 fit1 <- randomForest(logreg ~ hour +workingday+day+holiday+ day_type +temp_reg+humidity+atemp+windspeed+season+weather+dp_reg+weekend+year+year_part, data=train,importance=TRUE, ntree=250)
-  output$summary1 <- renderPrint({
  
-"Accuracy11111"
-  })
 pred1=predict(fit1,test)
 test$logreg=pred1
  
 set.seed(415)
-  output$summary2 <- renderPrint({
- "Misclassification"
-
-  })
+ 
 fit2 <- randomForest(logcas ~hour + day_type+day+humidity+atemp+temp_cas+windspeed+season+weather+holiday+workingday+dp_cas+weekend+year+year_part, data=train,importance=TRUE, ntree=250)
-   output$summary3 <- renderPrint({
-  "Misclassification11111111"
-
-  })
+ 
 pred2=predict(fit2,test)
 test$logcas=pred2
  
@@ -277,11 +282,14 @@ s<-data.frame(datetime=test$datetime,count=test$count)
 write.csv(s,file="F:/project report/Bike Rental/submit.csv",row.names=FALSE)
 
 
-   output$summary4 <- renderPrint({
-  "Misclassification444444444"
+   output$sum1 <- renderPrint({
+  "Done and Output file is created"
 
   })
-  
+   output$sum2 <- renderPrint({
+  paste(getwd())
+
+  })
   })
 
 }
