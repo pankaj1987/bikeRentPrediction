@@ -37,9 +37,10 @@ ui <- fluidPage(
       # Output: Data file ----
   tabsetPanel(type = "tabs",
                 
-                  tabPanel("Random Forest", verbatimTextOutput("sum1"),verbatimTextOutput("sum2"),verbatimTextOutput("sum3"),verbatimTextOutput("sum4")),
+                  tabPanel("Random Forest", verbatimTextOutput("sum1"),verbatimTextOutput("sum2"),verbatimTextOutput("sum3"),verbatimTextOutput("sum4"),plotOutput("plot"),plotOutput("plot1"),plotOutput("plot2")),
 				  tabPanel("Neural Network", verbatimTextOutput("sag"),verbatimTextOutput("sag1"),verbatimTextOutput("sag2"),verbatimTextOutput("sag3"),verbatimTextOutput("sag4"),verbatimTextOutput("sag5")),
-				  tabPanel("Table", tableOutput("table"))
+				  tabPanel("Table", tableOutput("table"))				
+				 
                         ),
  	tableOutput('txtout'),
      tableOutput("contents")
@@ -113,8 +114,10 @@ boxplot(train$registered~train$weather,xlab="weather", ylab="registered users 3"
 boxplot(train$casual~train$weather,xlab="weather", ylab="casual users")
 
 boxplot(train$registered~train$temp,xlab="temp", ylab="registered users 4")
-boxplot(train$casual~train$temp,xlab="temp", ylab="casual users")
 
+ output$plot <- renderPlot({
+ boxplot(train$casual~train$temp,xlab="temp", ylab="casual users")
+  })
 # extracting year from data
 data$year=substr(data$datetime,1,4)
 data$year=as.factor(data$year)
@@ -283,13 +286,24 @@ write.csv(s,file="F:/project report/Bike Rental/submit.csv",row.names=FALSE)
 
 
    output$sum1 <- renderPrint({
-  "Done and Output file is created"
+  "Output file is created"
 
   })
    output$sum2 <- renderPrint({
   paste(getwd())
 
   })
+   output$plot <- renderPlot({
+plot(train$registered,train$hour)
+  })
+   output$plot1 <- renderPlot({
+plot(train$registered,train$weather)
+  })
+   output$plot2 <- renderPlot({
+plot(train$registered,train$humidity)
+  })
+ 
+ as.data.frame("Done")
   })
 
 }
