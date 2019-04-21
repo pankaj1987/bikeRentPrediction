@@ -4,7 +4,9 @@ library(rattle)
 library(rpart.plot)
 library(RColorBrewer)
 library(randomForest)
-
+library("neuralnet")
+library(lubridate)
+library(RColorBrewer)
 # Define UI for data upload app ----
 ui <- fluidPage(
 
@@ -278,11 +280,13 @@ pred2=predict(fit2,test)
 test$logcas=pred2
  
 #creating the final submission file
+
+
 test$registered=exp(test$logreg)-1
 test$casual=exp(test$logcas)-1
 test$count=test$casual+test$registered
 s<-data.frame(datetime=test$datetime,count=test$count)
-write.csv(s,file="F:/project report/Bike Rental/submit.csv",row.names=FALSE)
+write.csv(s,file="randomresult.csv",row.names=FALSE)
 
 
    output$sum1 <- renderPrint({
@@ -304,8 +308,158 @@ plot(train$registered,train$humidity)
   })
  
  as.data.frame("Done")
-  })
+  
+  
+   
+  
+  
+#### Neural Network Start
 
+
+biketrain <-read.csv(input$file1$datapath,stringsAsFactors = FALSE) 
+str(biketrain)
+dim(biketrain)
+hist(biketrain$count)
+apply(biketrain, 2,range)
+bike1 <- biketrain[, sapply(biketrain, is.numeric)]
+maxValue <- apply(bike1, 2,max)
+minValue <- apply(bike1, 2,min)
+bike1 <- as.data.frame(scale(bike1,center=minValue,scale = maxValue-minValue))
+allVars<-colnames(bike1)
+predictorVars<-allVars[!allVars%in%"count"]
+predictorVars<-paste(predictorVars,collapse="+")
+form=as.formula(paste("count~",predictorVars,collapse = "+"))
+nuralModel <- neuralnet(formula = form,hidden = c(4,2),linear.output = T,data=bike1)
+plot(nuralModel)
+#test
+biketest <-read.csv("test.csv",stringsAsFactors = FALSE)
+str(biketest)
+dim(biketest)
+
+apply(biketest, 2,range)
+bike2 <- biketest[, sapply(biketest, is.numeric)]
+maxValue1 <- apply(bike2, 2,max)
+minValue1 <- apply(bike2, 2,min)
+bike2 <- as.data.frame(scale(bike2,center=minValue1,scale = maxValue1-minValue1))
+biketrain$datetime <- ymd_hms(biketrain$datetime)
+biketrain$season <- factor(biketrain$season
+                           ,levels = c(1,2,3,4)
+                           ,labels = c("spring", "summer", "fall", "winter")
+)
+
+biketrain$workingday <- factor(biketrain$workingday
+                               ,levels = c(0,1)
+                               ,labels = c("nonwkday", "wkday")
+)
+biketrain$weather <- factor(biketrain$weather
+                            ,levels = c(4,3,2,1)
+                            ,labels = c("very bad", "bad", "good", "very good")
+                            ,ordered = TRUE)
+
+
+
+biketrain$hour <- hour(biketrain$datetime)
+
+biketrain$month_nbr <- month(biketrain$datetime)
+
+biketrain$month <- factor(months(biketrain$datetime)
+                          ,levels = c("January"
+                                      ,"February"
+                                      ,"March"
+                                      ,"April"
+                                      ,"May"
+                                      ,"June"
+                                      ,"July"
+                                      ,"August"
+                                      ,"September"
+                                      ,"October"
+                                      ,"November"
+                                      ,"December")
+                          ,ordered = TRUE)
+
+
+
+yearmask <- year(biketrain$datetime) == 2012
+
+biketrain <- biketrain[yearmask,] 
+
+bike3 <- biketrain[c("temp"
+                     ,"hour"
+                     ,"workingday"
+                     ,"month_nbr"
+                     ,"count")]
+
+bikelm <- lm(count ~ .
+             ,data = bike3
+)
+
+biketest$datetime <- ymd_hms(biketest$datetime)
+
+biketest$season <- factor(biketest$season
+                          ,levels = c(1,2,3,4)
+                          ,labels = c("spring", "summer", "fall", "winter")
+)
+
+biketest$workingday <- factor(biketest$workingday
+                              ,levels = c(0,1)
+                              ,labels = c("nonwkday", "wkday")
+)
+
+biketest$weather <- factor(biketest$weather
+                           ,levels = c(4,3,2,1)
+                           ,labels = c("very bad", "bad", "good", "very good")
+                           ,ordered = TRUE)
+
+
+
+biketest$hour <- hour(biketest$datetime)
+
+biketest$month_nbr <- month(biketest$datetime)
+
+biketest$month <- factor(months(biketest$datetime)
+                         ,levels = c("January"
+                                     ,"February"
+                                     ,"March"
+                                     ,"April"
+                                     ,"May"
+                                     ,"June"
+                                     ,"July"
+                                     ,"August"
+                                     ,"September"
+                                     ,"October"
+                                     ,"November"
+                                     ,"December")
+                         ,ordered = TRUE)
+
+
+biket4 <- biketest[c("temp"
+                     ,"hour"
+                     ,"workingday"
+                     ,"month_nbr")]
+
+
+brental <- predict(bikelm
+                   ,newdata = biket4
+)
+
+
+brental[brental < 0] <- min(brental[brental > 0]) 
+
+brental <- round(brental, 0)
+
+
+bikesub <- data.frame(datetime = as.character(biketest$datetime)
+                      ,count = as.integer(brental)
+)
+write.csv(bikesub
+          ,file = "neuralresult.csv"
+          ,row.names = FALSE
+          ,quote = FALSE
+)
+### Neural Network End
+  
+  
+  })
 }
 
 # Create Shiny app ----
