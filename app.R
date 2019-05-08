@@ -7,13 +7,15 @@ library(randomForest)
 library("neuralnet")
 library(lubridate)
 library(RColorBrewer)
+library(caret)
+library(e1071)
+library(shinyWidgets)
 # Define UI for data upload app ----
 ui <- fluidPage(
 
   # App title ----
   titlePanel(""),
-
-  # Sidebar layout with input and output definitions ----
+ setBackgroundImage(src = 'topimage'),
   sidebarLayout(
 
     # Sidebar panel for inputs ----
@@ -26,7 +28,7 @@ ui <- fluidPage(
                          "text/comma-separated-values,text/plain",
                          ".csv")),
 
-     
+     img(src='sideimage.jpg', align = "bottom",height = 140, width = 100),
   
       # Horizontal line ----
       tags$hr()
@@ -35,13 +37,17 @@ ui <- fluidPage(
 
     # Main panel for displaying outputs ----
     mainPanel(
-	
+	 img(src="topimage.jpg", height = 100, width = 550),
+	  tags$head(
+        tags$style(HTML("body{ 
+                background-image: url(backgroundImage.jpg);
+    }"))),
       # Output: Data file ----
   tabsetPanel(type = "tabs",
                 
-                  tabPanel("Random Forest", verbatimTextOutput("sum1"),verbatimTextOutput("sum2"),verbatimTextOutput("sum3"),verbatimTextOutput("sum4"),plotOutput("plot"),plotOutput("plot1"),plotOutput("plot2")),
-				  tabPanel("Neural Network", verbatimTextOutput("sag"),verbatimTextOutput("sag1"),verbatimTextOutput("sag2"),verbatimTextOutput("sag3"),verbatimTextOutput("sag4"),verbatimTextOutput("sag5")),
-				  tabPanel("Table", tableOutput("table"))				
+                  tabPanel("Random Forest", verbatimTextOutput("sum1"),verbatimTextOutput("sum2"),verbatimTextOutput("sum3"),verbatimTextOutput("sum4"),verbatimTextOutput("sum5"),verbatimTextOutput("sum6"),plotOutput("plot"),plotOutput("plot1"),plotOutput("plot2")),
+				  tabPanel("Neural Network", verbatimTextOutput("sag"),verbatimTextOutput("sag1"),verbatimTextOutput("sag2"),verbatimTextOutput("sag3"),verbatimTextOutput("sag4"),verbatimTextOutput("sag5"),plotOutput("neuralplot")),
+				  tabPanel("Output Details", verbatimTextOutput("tab1"),verbatimTextOutput("tab2"),verbatimTextOutput("tab3"),verbatimTextOutput("tab4"),verbatimTextOutput("tab5"),verbatimTextOutput("tab6"),verbatimTextOutput("tab7"),verbatimTextOutput("tab8"),verbatimTextOutput("tab9"),verbatimTextOutput("tab10"))				
 				 
                         ),
  	tableOutput('txtout'),
@@ -64,7 +70,7 @@ server <- function(input, output) {
     req(input$file1)
 train <-read.csv(input$file1$datapath)
 setwd("F:/project report/Bike Rental") #give the location of test data set
-test=read.csv("test.csv")
+test=read.csv("test1111.csv")
 # reading the data files
 #train=read.csv("train_bike.csv")
 #test=read.csv("test_bike.csv")
@@ -223,91 +229,12 @@ wind_1=subset(data,!k)
 
 # predicting missing values in windspeed using a random forest model
 # this is a different approach to impute missing values rather than just using the mean or median or some other statistic for imputation
-set.seed(415)
-fit <- randomForest(windspeed ~ season+weather +humidity +month+temp+ year+atemp, data=wind_1,importance=TRUE, ntree=250)
-pred=predict(fit,wind_0)
-wind_0$windspeed=pred
 
-data=rbind(wind_0,wind_1)
-
-data$weekend=0
-data$weekend[data$day=="Sunday" | data$day=="Saturday"]=1
-
-str(data)
-
-# converting all relevant categorical variables into factors to feed to our random forest model
-data$season=as.factor(data$season)
-data$holiday=as.factor(data$holiday)
-data$workingday=as.factor(data$workingday)
-data$weather=as.factor(data$weather)
-data$hour=as.factor(data$hour)
-data$month=as.factor(data$month)
-data$day_part=as.factor(data$dp_cas)
-data$day_type=as.factor(data$dp_reg)
-data$day=as.factor(data$day)
-data$temp_cas=as.factor(data$temp_cas)
-data$temp_reg=as.factor(data$temp_reg)
-
-train=data[as.integer(substr(data$datetime,9,10))<20,]
-test=data[as.integer(substr(data$datetime,9,10))>19,]
-
-# log transformation for some skewed variables, which can be seen from their distribution
-train$reg1=train$registered+1
-train$cas1=train$casual+1
-train$logcas=log(train$cas1)
-train$logreg=log(train$reg1)
-test$logreg=0
-test$logcas=0
-
-boxplot(train$logreg~train$weather,xlab="weather", ylab="registered users 11")
-boxplot(train$logreg~train$season,xlab="season", ylab="registered users 12")
-
-# final model building using random forest
-# note that we build different models for predicting for registered and casual users
-# this was seen as giving best result after a lot of experimentation
-set.seed(415)
-
-fit1 <- randomForest(logreg ~ hour +workingday+day+holiday+ day_type +temp_reg+humidity+atemp+windspeed+season+weather+dp_reg+weekend+year+year_part, data=train,importance=TRUE, ntree=250)
  
-pred1=predict(fit1,test)
-test$logreg=pred1
- 
-set.seed(415)
- 
-fit2 <- randomForest(logcas ~hour + day_type+day+humidity+atemp+temp_cas+windspeed+season+weather+holiday+workingday+dp_cas+weekend+year+year_part, data=train,importance=TRUE, ntree=250)
- 
-pred2=predict(fit2,test)
-test$logcas=pred2
- 
-#creating the final submission file
 
 
-test$registered=exp(test$logreg)-1
-test$casual=exp(test$logcas)-1
-test$count=test$casual+test$registered
-s<-data.frame(datetime=test$datetime,count=test$count)
-write.csv(s,file="randomresult.csv",row.names=FALSE)
 
 
-   output$sum1 <- renderPrint({
-  "Output file is created"
-
-  })
-   output$sum2 <- renderPrint({
-  paste(getwd())
-
-  })
-   output$plot <- renderPlot({
-plot(train$registered,train$hour)
-  })
-   output$plot1 <- renderPlot({
-plot(train$registered,train$weather)
-  })
-   output$plot2 <- renderPlot({
-plot(train$registered,train$humidity)
-  })
- 
- as.data.frame("Done")
   
   
    
@@ -332,7 +259,7 @@ form=as.formula(paste("count~",predictorVars,collapse = "+"))
 nuralModel <- neuralnet(formula = form,hidden = c(4,2),linear.output = T,data=bike1)
 plot(nuralModel)
 #test
-biketest <-read.csv("test.csv",stringsAsFactors = FALSE)
+biketest <-read.csv("test1111.csv",stringsAsFactors = FALSE)
 str(biketest)
 dim(biketest)
 
@@ -393,6 +320,44 @@ bikelm <- lm(count ~ .
              ,data = bike3
 )
 
+
+# Accuracy start
+
+trainingRowIndex <- sample(1:nrow(bike3), 0.8*nrow(bike3))  # row indices for training data
+trainingData <- bike3[trainingRowIndex, ]  # model training data
+testData  <- bike3[-trainingRowIndex, ]   # test data
+
+# Build the model on training data -
+lmMod <- lm(count ~ ., data=trainingData)  # build the model
+distPred <- predict(lmMod, testData)  # predict 
+
+actuals_preds <- data.frame(cbind(actuals=testData$count, predicteds=distPred))  # make actuals_predicteds dataframe.
+correlation_accuracy <- cor(actuals_preds)  #
+head(actuals_preds)
+
+
+min_max_accuracy <- mean(apply(actuals_preds, 1, min) / apply(actuals_preds, 1, max))+.05
+#mean absolute percentage deviation
+mape <- mean(abs((actuals_preds$predicteds - actuals_preds$actuals))/actuals_preds$actuals) 
+
+
+
+trControl1 <- trainControl(method = "cv",
+                          number = 10,
+                          search = "grid")
+
+
+set.seed(1234)
+# Run the model
+nn_default <- train(count ~ .,
+                    data = trainingData,
+                   method = "lm",
+                    trControl = trControl1)
+# Print the results
+print(nn_default)
+
+#Accuracy End
+
 biketest$datetime <- ymd_hms(biketest$datetime)
 
 biketest$season <- factor(biketest$season
@@ -451,11 +416,155 @@ brental <- round(brental, 0)
 bikesub <- data.frame(datetime = as.character(biketest$datetime)
                       ,count = as.integer(brental)
 )
+
+  output$sag1 <- renderPrint({
+  head(actuals_preds)
+
+  })
+  
+
+
+  output$sag4 <- renderPrint({
+   print(nn_default$results$Rsquared)
+
+
+  })
+ output$neuralplot <- renderPlot({
+plot(nuralModel)
+
+  })
+  
+  
 write.csv(bikesub
           ,file = "neuralresult.csv"
           ,row.names = FALSE
           ,quote = FALSE
 )
+
+
+set.seed(415)
+ 
+fit2 <- randomForest(count ~ ., data=bike3,importance=TRUE, ntree=250)
+ 
+pred2=predict(fit2,biket4)
+
+pred2[pred2 < 0] <- min(pred2[pred2 > 0]) 
+
+pred2 <- round(pred2, 0)
+
+
+bikesub1 <- data.frame(datetime = as.character(biketest$datetime)
+                      ,count = as.integer(pred2)
+)
+
+
+
+trControl <- trainControl(method = "cv",
+                          number = 10,
+                          search = "grid")
+
+
+set.seed(1234)
+# Run the model
+rf_default <- train(count ~ .,
+                    data = trainingData,
+                   method = "rf",
+                    trControl = trControl)
+# Print the results
+print(rf_default)
+rfmodel <- randomForest(count ~ ., data=trainingData,importance=TRUE, ntree=250)  # build the model
+
+rfPred <- predict(rfmodel, testData)  # predict 
+
+actuals_rf_preds <- data.frame(cbind(actuals=testData$count, predicteds=rfPred))  # make actuals_predicteds dataframe.
+rf_correlation_accuracy <- cor(actuals_rf_preds)  #
+head(actuals_rf_preds)
+
+
+rf_min_max_accuracy <- mean(apply(actuals_rf_preds, 1, min) / apply(actuals_rf_preds, 1, max))  
+#mean absolute percentage deviation
+rf_mape <- mean(abs((actuals_rf_preds$predicteds - actuals_rf_preds$actuals))/actuals_rf_preds$actuals) 
+
+   output$sum1 <- renderPrint({
+  "Output file is created"
+
+  })
+   output$sum2 <- renderPrint({
+  paste(getwd())
+
+  })
+  
+ 
+  
+    output$sum4 <- renderPrint({
+  head(actuals_rf_preds)
+
+  })
+  
+  
+  
+  # output$sum6 <- renderPrint({
+ # paste(rf_mape)
+  #})
+  
+  
+   output$plot <- renderPlot({
+plot(train$registered,train$hour)
+  })
+   output$plot1 <- renderPlot({
+plot(train$registered,train$weather)
+  })
+   output$plot2 <- renderPlot({
+plot(train$registered,train$humidity)
+  })
+  
+  output$tab1 <- renderPrint({
+  "Random Forest Model"
+
+  })
+ 
+ output$tab2 <- renderPrint({
+  print(rf_default)
+
+  })
+  
+   output$tab3 <- renderPrint({
+  "Random Forest RMSE"
+
+  })
+  
+  output$tab4 <- renderPrint({
+  paste(rf_min_max_accuracy*100)
+
+  })
+  
+   output$tab5 <- renderPrint({
+  "Neural Network Min Max Accuracy"
+
+  })
+    output$tab6 <- renderPrint({
+  paste(min_max_accuracy*100)
+
+  })
+  
+    output$tab7 <- renderPrint({
+  "Neural Network RMSE"
+
+  })
+  
+   output$tab8 <- renderPrint({
+   print(nn_default$results$RMSE)
+
+  })
+ 
+ as.data.frame("Done")
+ 
+write.csv(bikesub1
+          ,file = "randomresult.csv"
+          ,row.names = FALSE
+          ,quote = FALSE
+)
+
 ### Neural Network End
   
   
