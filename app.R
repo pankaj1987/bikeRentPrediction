@@ -16,6 +16,7 @@ ui <- fluidPage(
   # App title ----
   titlePanel(""),
  setBackgroundImage(src = 'topimage'),
+
   sidebarLayout(
 
     # Sidebar panel for inputs ----
@@ -51,7 +52,7 @@ ui <- fluidPage(
 				 
                         ),
  	tableOutput('txtout'),
-     tableOutput("contents")
+    tableOutput("contents")
 
     )
 
